@@ -3,6 +3,9 @@ site_url: https://127.0.0.1:8808
 dev_addr: "127.0.0.1:8808"
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/templates.css
+extra_javascript:
+  - javascripts/templates.js
 theme:
   theme:
     icon:
@@ -61,3 +64,4 @@ nav:
   - "CRUD functionaliteit": "crud_functionaliteit.md"
   - "Tijdlijn functionaliteit": "tijdlijn_functionaliteit.md"
   - "Markdown": "markdown.md"
+  - "Templates": "templates.md"

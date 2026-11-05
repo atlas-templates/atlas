@@ -1,0 +1,59 @@
+name: Template indienen
+description: Deel een template voor gekoppelde data met andere Atlas-beheerders. Na goedkeuring verschijnt hij op de templatepagina in de beheerdocumentatie.
+title: "[Template] "
+labels: ["template-ingediend"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bedankt voor het delen! Een template is één zip-bestand met precies deze vijf exportbestanden uit Atlas:
+
+        - `layers_datum.json`
+        - `authorizations_datum.json`
+        - `tables_datum.json`
+        - `sources_datum.json`
+        - `categories_datum.json`
+
+        Verzamel ze via de exportfunctie in het beheer en maak er één zip-bestand van.
+        Een beheerder van deze repository bekijkt de inzending. Na goedkeuring wordt de zip automatisch
+        gecontroleerd en toegevoegd, en staat hij binnen een paar minuten in de lijst.
+
+        **Let op:** alles wat je hier indient is openbaar. Haal wachtwoorden, API-sleutels, interne URL's
+        en persoonsgegevens uit de bestanden voordat je ze deelt.
+  - type: input
+    id: naam
+    attributes:
+      label: Naam van de template
+      description: Een korte, duidelijke naam.
+      placeholder: Subbuurten met wijk- en buurtrelaties
+    validations:
+      required: true
+  - type: textarea
+    id: beschrijving
+    attributes:
+      label: Beschrijving
+      description: Welke gekoppelde data bevat de template en wat moet een ander aanpassen voor de eigen omgeving?
+    validations:
+      required: true
+  - type: input
+    id: versie
+    attributes:
+      label: Atlas-versie
+      description: Uit welke versie van Atlas komt de export? Import werkt alleen betrouwbaar tussen gelijke versies.
+      placeholder: "2.4.0"
+    validations:
+      required: true
+  - type: textarea
+    id: zip
+    attributes:
+      label: Zip-bestand
+      description: Sleep precies één .zip-bestand met de vijf exportbestanden in dit veld.
+    validations:
+      required: true
+  - type: checkboxes
+    id: akkoord
+    attributes:
+      label: Bevestiging
+      options:
+        - label: De bestanden bevatten geen wachtwoorden, sleutels of persoonsgegevens en mogen openbaar gedeeld worden.
+          required: true

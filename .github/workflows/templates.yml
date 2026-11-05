@@ -1,0 +1,98 @@
+name: Templates
+
+# Shared linked-data templates for the admin documentation.
+# - An issue labelled `template-goedgekeurd` is validated and turned into a folder in docs/templates/.
+# - Every change to docs/templates/ on main regenerates docs/templates/index.json.
+# The templates page in the admin docs reads index.json live from GitHub.
+# Comments posted on issues are in Dutch, matching the documentation.
+
+on:
+  issues:
+    types: [labeled]
+  push:
+    branches: ["main"]
+    paths:
+      - "docs/templates/**"
+      - "!docs/templates/index.json"
+  workflow_dispatch:
+
+concurrency:
+  group: templates
+  cancel-in-progress: false
+
+jobs:
+  add-template:
+    name: Add template from issue
+    if: github.event_name == 'issues' && github.event.label.name == 'template-goedgekeurd'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Validate template and update index
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ERROR_FILE: ${{ runner.temp }}/template-error.txt
+        run: python3 .github/scripts/templates.py from-issue
+
+      - name: Commit and push
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/templates
+          git commit -m "Add template from #${ISSUE_NUMBER}"
+          git push
+
+      - name: Comment on and close issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Bedankt! De template is toegevoegd en staat binnen een paar minuten op de templatepagina in de beheerdocumentatie."
+          gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+
+      - name: Report failure on issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ERROR_FILE: ${{ runner.temp }}/template-error.txt
+        run: |
+          reason="Er ging iets mis bij het verwerken. Bekijk de workflow-log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          if [ -s "$ERROR_FILE" ]; then reason="$(cat "$ERROR_FILE")"; fi
+          printf 'De template kon niet worden toegevoegd.\n\n%s\n\nPas het issue aan en zet het label `template-goedgekeurd` opnieuw om het nog eens te proberen.\n' "$reason" > "$RUNNER_TEMP/comment.md"
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label template-goedgekeurd
+
+  rebuild-index:
+    name: Rebuild index.json
+    if: github.event_name != 'issues'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build index
+        run: python3 .github/scripts/templates.py build-index
+
+      - name: Commit if index changed
+        run: |
+          if git diff --quiet -- docs/templates/index.json; then
+            echo "index.json is up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/templates/index.json
+          git commit -m "Update template index"
+          git push

@@ -194,3 +194,8 @@ Met dit voorbeeld laten we zien hoe je een OWS laag kan configureren.
 | **Laagnaam**                             | `topp:grenzen_subbuurten`                                             |
 | **Lijst CQL filters**                    | `[{"key": "wijk", "cql_filter": "wijk in ('{{wijk}}')"}]`             |
 | **Detail CQL filters**                   | `[{"key": "subbuurt", "cql_filter": "subbuurt in ('{{subbuurt}}')"}]` |
+
+## Templates voor gekoppelde data
+
+Wil je niet vanaf nul beginnen? Op de pagina [Templates](templates.md) vind je complete configuraties
+voor gekoppelde data die andere Atlas-beheerders hebben gedeeld. Je kunt daar ook zelf een template delen.
