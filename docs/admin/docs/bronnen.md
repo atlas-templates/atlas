@@ -7,6 +7,8 @@ http://mijnserver.nl/geoserver/wms
 
 Binnen Atlas kunnen meerdere endpoints geconfigureerd worden. Zo kan er een bron voor WMS lagen zijn, voor WFS (Web Feature Service) of bronnen voor externe kaartlagen. Bronnen kunnen toegevoegd, bewerkt of verwijderd worden.
 
+Een bron kan ook het endpoint van een API zijn. Deze bronnen kunnen gebruikt worden voor gekoppelde data.
+
 Klik op Nieuwe bron om een bron toe te voegen. Vul de Titel in, deze verschijnt in het hoofdmenu bronnen. Het veld Kort kenmerk moet een unieke waarde hebben en mag geen spaties bevatten. Vul bij de URL het endpoint in.
 
 ### Algemene gegevens
