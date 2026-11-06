@@ -9,7 +9,7 @@ Een nieuwe template is daardoor in elke Atlas-installatie zichtbaar zonder nieuw
 ## Indienen
 
 Gebruikers dienen een template in via het issue-formulier
-[Template indienen](https://github.com/<orgnaam>/atlas/issues/new?template=template-indienen.yml).
+[Template indienen](https://github.com/atlas-templates/atlas/issues/new?template=template-indienen.yml).
 Het issue krijgt automatisch het label `template-ingediend`.
 
 ## Goedkeuren (beheerders van de repository)

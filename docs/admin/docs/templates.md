@@ -5,7 +5,7 @@ Download een template en pas het aan voor je eigen omgeving.
 
 !!! tip "Zelf een template delen"
     Heb je een template die je wilt delen? Dien het in via
-    [Template indienen](https://github.com/<orgnaam>/atlas/issues/new?template=template-indienen.yml).
+    [Template indienen](https://github.com/atlas-templates/atlas/issues/new?template=template-indienen.yml).
     Je hebt hiervoor een GitHub-account nodig. Na goedkeuring verschijnt je template automatisch
     in de lijst hieronder.
 
@@ -15,13 +15,13 @@ Download een template en pas het aan voor je eigen omgeving.
     en maak er één zip-bestand van.
 
 <div id="atlas-templates"
-     data-index-url="https://raw.githubusercontent.com/<orgnaam>/atlas/main/docs/templates/index.json"
-     data-files-url="https://raw.githubusercontent.com/<orgnaam>/atlas/main/docs/templates/"
-     data-browse-url="https://github.com/<orgnaam>/atlas/tree/main/docs/templates/"
-     data-issue-url="https://github.com/<orgnaam>/atlas/issues/">
+     data-index-url="https://raw.githubusercontent.com/atlas-templates/atlas/main/docs/templates/index.json"
+     data-files-url="https://raw.githubusercontent.com/atlas-templates/atlas/main/docs/templates/"
+     data-browse-url="https://github.com/atlas-templates/atlas/tree/main/docs/templates/"
+     data-issue-url="https://github.com/atlas-templates/atlas/issues/">
   <p class="tpl-status">Templates laden…</p>
   <noscript>
     <p>Zet JavaScript aan om de lijst te zien, of bekijk de templates direct
-    <a href="https://github.com/<orgnaam>/atlas/tree/main/docs/templates">op GitHub</a>.</p>
+    <a href="https://github.com/atlas-templates/atlas/tree/main/docs/templates">op GitHub</a>.</p>
   </noscript>
 </div>
