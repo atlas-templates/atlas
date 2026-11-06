@@ -1,0 +1,16 @@
+{
+  "name": "energielabel-opvragen-eponline",
+  "description": "Deze template bevat de configuratie om alle beschikbare velden uit de EP-Online Public REST API op te halen.\nEen API key is vereist plus configuratie in FilterProxy. Kijk ook op https://public.ep-online.nl/swagger.\nKijk hier voor de complete ep-online handleiding: https://www.rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf",
+  "atlas_version": "3.61.0",
+  "author": "mvlijmen1",
+  "issue": 1,
+  "added": "2026-11-06",
+  "file": "energielabels.zip",
+  "contents": [
+    "authorizations_2026_11_06.json",
+    "categories_2026_11_06.json",
+    "layers_2026_11_06.json",
+    "sources_2026_11_06.json",
+    "tables_2026_11_06.json"
+  ]
+}
