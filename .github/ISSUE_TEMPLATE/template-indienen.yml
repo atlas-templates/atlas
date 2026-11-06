@@ -40,7 +40,7 @@ body:
     attributes:
       label: Atlas-versie
       description: Uit welke versie van Atlas komt de export? Import werkt alleen betrouwbaar tussen gelijke versies.
-      placeholder: "2.4.0"
+      placeholder: "3.61.0"
     validations:
       required: true
   - type: textarea
