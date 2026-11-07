@@ -1,7 +1,7 @@
 # Templates
 
 Op deze pagina vind je templates voor gekoppelde data die andere Atlas-beheerders hebben gedeeld.
-Download een template en pas bron, categorie en metadataverwijzing aan voor je eigen omgeving.
+Download een template, importeer de bestanden en pas bron, categorie en metadataverwijzing aan voor je eigen omgeving.
 
 !!! tip "Zelf een template delen"
     Heb je een template die je wilt delen? Dien het in via
