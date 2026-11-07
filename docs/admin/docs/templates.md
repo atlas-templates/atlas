@@ -6,7 +6,7 @@ Download een template en pas bron, categorie en metadataverwijzing aan voor je e
 !!! tip "Zelf een template delen"
     Heb je een template die je wilt delen? Dien het in via
     [Template indienen](https://github.com/atlas-templates/atlas/issues/new?template=template-indienen.yml).
-    Je hebt hiervoor een GitHub-account nodig. Na goedkeuring verschijnt je template automatisch
+    Je hebt hiervoor een [GitHub-account](https://github.com) nodig. Na goedkeuring verschijnt je template automatisch
     in de lijst hieronder.
 
 !!! warning "Lever een complete set aan"
