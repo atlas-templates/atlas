@@ -1,0 +1,21 @@
+{
+  "name": "woz-waardes-opvragen",
+  "description": "Het WOZ-waardeloket toont alleen waardegegevens van woningen. Voor bedrijfspanden krijg je dus geen waardes te zien.\nLet op: Dit zijn de gegevens van wozwaardeloket.nl. Wozwaardeloket.nl geeft geen garantie over de werking van de site. URL's en verwijzingen kunnen zonder aankondiging veranderen.",
+  "atlas_version": "3.61.0",
+  "author": "mvlijmen1",
+  "issue": 5,
+  "added": "2026-11-09",
+  "file": "woz-waardes.zip",
+  "contents": [
+    "categories_2026_11_09.json",
+    "layers_2026_11_09.json",
+    "sources_2026_11_09.json",
+    "tables_2026_11_09.json"
+  ],
+  "images": [
+    {
+      "file": "afbeelding-1.png",
+      "alt": ""
+    }
+  ]
+}
