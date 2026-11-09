@@ -1,25 +1,6 @@
 {
   "templates": [
     {
-      "id": "woz-waardes-opvragen",
-      "name": "woz-waardes-opvragen",
-      "description": "<img width=\"897\" height=\"677\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/36f6a3b0-59e0-4588-a1ad-5082e2de0b9f\" />\nHet WOZ-waardeloket toont alleen waardegegevens van woningen. Voor bedrijfspanden krijg je dus geen waardes te zien.  \nLet op: Dit zijn de gegevens van wozwaardeloket.nl. Wozwaardeloket.nl geeft geen garantie over de werking van de site. URL's en verwijzingen kunnen zonder aankondiging veranderen.",
-      "atlas_version": "3.61.0",
-      "author": "mvlijmen1",
-      "issue": 4,
-      "added": "2026-11-09",
-      "file": "woz-waardes.zip",
-      "contents": [
-        "categories_2026_11_09.json",
-        "layers_2026_11_09.json",
-        "sources_2026_11_09.json",
-        "tables_2026_11_09.json"
-      ],
-      "images": [],
-      "path": "woz-waardes-opvragen/woz-waardes.zip",
-      "size": 2293
-    },
-    {
       "id": "energielabel-opvragen-eponline",
       "name": "energielabel-opvragen-eponline",
       "description": "Deze template bevat de configuratie om alle beschikbare velden uit de EP-Online Public REST API op te halen.\nEen API key is vereist plus configuratie in FilterProxy. Kijk ook op https://public.ep-online.nl/swagger.\nKijk hier voor de complete ep-online handleiding: https://www.rvo.nl/sites/default/files/2025-02/handleiding-ep-online-opvragen-van-bestanden.pdf",
