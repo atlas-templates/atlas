@@ -1,0 +1,74 @@
+name: Template check
+
+# Validates a template submission as soon as the issue is opened or edited, so the submitter
+# gets feedback right away instead of after review. The result is posted as a single comment
+# (updated on every run) and reflected in the labels `controle-geslaagd` / `controle-mislukt`.
+# Nothing is written to the repository here; that only happens after approval (templates.yml).
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: template-check-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check submission
+    if: >-
+      github.event.issue.state == 'open' &&
+      (contains(github.event.issue.labels.*.name, 'template-ingediend') ||
+       contains(github.event.issue.body, '### Zip-bestand'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Validate submission
+        id: validate
+        continue-on-error: true
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECK_REPORT_FILE: ${{ runner.temp }}/check-report.md
+        run: python3 .github/scripts/templates.py check-issue
+
+      - name: Post or update check comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPORT_FILE: ${{ runner.temp }}/check-report.md
+        run: |
+          if [ ! -s "$REPORT_FILE" ]; then
+            printf '<!-- template-check -->\n⚠️ **Automatische controle kon niet worden uitgevoerd.** Een beheerder kijkt ernaar.\n' > "$REPORT_FILE"
+          fi
+          comment_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- template-check -->"))) | .id' \
+            | tail -n 1)
+          if [ -n "$comment_id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -F body=@"$REPORT_FILE" > /dev/null
+          else
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT_FILE"
+          fi
+
+      - name: Update check labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          CHECK_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          gh label create controle-geslaagd --repo "$GITHUB_REPOSITORY" --color 2da44e \
+            --description "Automatische controle van de zip is geslaagd" --force
+          gh label create controle-mislukt --repo "$GITHUB_REPOSITORY" --color d1242f \
+            --description "Automatische controle van de zip is mislukt" --force
+          if [ "$CHECK_OUTCOME" = "success" ]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --add-label controle-geslaagd --remove-label controle-mislukt
+          else
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --add-label controle-mislukt --remove-label controle-geslaagd
+          fi

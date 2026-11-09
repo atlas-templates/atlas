@@ -6,17 +6,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Bedankt voor het delen! Een template is één zip-bestand met precies deze vijf exportbestanden uit Atlas:
+        Bedankt voor het delen! Een template is één zip-bestand met exportbestanden uit Atlas.
+        Verzamel ze via de exportfunctie in het beheer, maak er één zip-bestand van en vink hieronder aan
+        welke bestanden erin zitten.
 
-        - `layers_datum.json`
-        - `authorizations_datum.json`
-        - `tables_datum.json`
-        - `sources_datum.json`
-        - `categories_datum.json`
-
-        Verzamel ze via de exportfunctie in het beheer en maak er één zip-bestand van.
-        Een beheerder van deze repository bekijkt de inzending. Na goedkeuring wordt de zip automatisch
-        gecontroleerd en toegevoegd, en staat hij binnen een paar minuten in de lijst.
+        Direct na het indienen controleert een automatische check je zip. Binnen een minuut zie je het
+        resultaat als reactie in je issue. Daarna bekijkt een beheerder je inzending. Na goedkeuring
+        staat de template binnen een paar minuten in de lijst.
 
         **Let op:** alles wat je hier indient is openbaar. Haal wachtwoorden, API-sleutels, interne URL's
         en persoonsgegevens uit de bestanden voordat je ze deelt.
@@ -44,11 +40,22 @@ body:
       value: "3.61.0"
     validations:
       required: true
+  - type: checkboxes
+    id: bestanden
+    attributes:
+      label: Bestanden in de zip
+      description: Vink aan welke exportbestanden in de zip zitten. De zip mag geen andere bestanden bevatten.
+      options:
+        - label: "`layers_datum.json`"
+        - label: "`authorizations_datum.json`"
+        - label: "`tables_datum.json`"
+        - label: "`sources_datum.json`"
+        - label: "`categories_datum.json`"
   - type: textarea
     id: zip
     attributes:
       label: Zip-bestand
-      description: Sleep precies één .zip-bestand met de vijf exportbestanden in dit veld.
+      description: Sleep precies één .zip-bestand met de aangevinkte exportbestanden in dit veld.
     validations:
       required: true
   - type: checkboxes

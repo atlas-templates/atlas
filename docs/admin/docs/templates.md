@@ -10,9 +10,10 @@ Download een template, importeer de bestanden en pas bron, categorie en metadata
     in de lijst hieronder.
 
 !!! warning "Lever een complete set aan"
-    Zorg dat je een complete set met JSON-bestanden hebt (`layers_datum.json`, `authorizations_datum.json`,
-    `tables_datum.json`, `sources_datum.json`, `categories_datum.json`). Verzamel deze via de exportfunctie
-    en maak er één zip-bestand van.
+    Zorg dat je alle JSON-bestanden hebt die de template nodig heeft (`layers_datum.json`,
+    `authorizations_datum.json`, `tables_datum.json`, `sources_datum.json`, `categories_datum.json`).
+    Verzamel deze via de exportfunctie en maak er één zip-bestand van. Bij het indienen vink je aan
+    welke bestanden in de zip zitten.
 
 <div id="atlas-templates"
      data-index-url="https://raw.githubusercontent.com/atlas-templates/atlas/main/docs/templates/index.json"

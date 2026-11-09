@@ -1,11 +1,12 @@
 """Manage shared linked-data templates in docs/templates/.
 
 Usage:
+    python .github/scripts/templates.py check-issue  # validate a submission and write a report for the submitter
     python .github/scripts/templates.py from-issue   # add the template from an approved issue
     python .github/scripts/templates.py build-index  # regenerate docs/templates/index.json
 
-`from-issue` reads the issue data from environment variables (ISSUE_BODY, ISSUE_NUMBER,
-ISSUE_AUTHOR and optionally GH_TOKEN) so user input never ends up in a shell command.
+`check-issue` and `from-issue` read the issue data from environment variables (ISSUE_BODY,
+ISSUE_NUMBER, ISSUE_AUTHOR and optionally GH_TOKEN) so user input never ends up in a shell command.
 Messages shown to users are in Dutch, matching the rest of the documentation.
 Only the standard library is used.
 """
@@ -17,6 +18,7 @@ import os
 import re
 import sys
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
@@ -31,15 +33,21 @@ MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # 50 MB, guards against zip bombs
 ATTACHMENT_URL_PATTERN = re.compile(r"https://github\.com/user-attachments/files/\d+/[^\s)\]\"'<>]+")
 
-# Every template must contain exactly one export file for each of these Atlas components.
-REQUIRED_EXPORT_PREFIXES = ("layers", "authorizations", "tables", "sources", "categories")
+# Atlas components a template can contain. The submitter ticks which ones are in the zip;
+# the zip must then contain exactly one export file for each ticked component and nothing else.
+EXPORT_PREFIXES = ("layers", "authorizations", "tables", "sources", "categories")
 EXPORT_FILE_PATTERN = re.compile(r"^(?P<prefix>[a-z]+)_.+\.json$", re.IGNORECASE)
+CHECKED_OPTION_PATTERN = re.compile(r"^\s*[-*]\s*\[[xX]\]\s*(?P<label>.+)$")
+
+# Marker that identifies the automatic check comment, so it can be updated instead of duplicated.
+CHECK_COMMENT_MARKER = "<!-- template-check -->"
 
 # Labels must match the ones in .github/ISSUE_TEMPLATE/template-indienen.yml
 ISSUE_FORM_LABELS = {
     "name": "Naam van de template",
     "description": "Beschrijving",
     "atlas_version": "Atlas-versie",
+    "included_files": "Bestanden in de zip",
     "attachment": "Zip-bestand",
 }
 
@@ -67,6 +75,19 @@ def parse_issue_body(body: str) -> dict:
     return fields
 
 
+def parse_checked_export_prefixes(checkbox_text: str) -> list[str]:
+    """Return the export prefixes whose checkbox is ticked, in the canonical order."""
+    checked = set()
+    for line in checkbox_text.split("\n"):
+        match = CHECKED_OPTION_PATTERN.match(line)
+        if not match:
+            continue
+        for prefix in EXPORT_PREFIXES:
+            if re.search(rf"\b{prefix}_", match.group("label"), re.IGNORECASE):
+                checked.add(prefix)
+    return [prefix for prefix in EXPORT_PREFIXES if prefix in checked]
+
+
 def slugify(text: str) -> str:
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
@@ -86,8 +107,11 @@ def download_attachment(url: str, token: str | None) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": "atlas-templates-action"})
     if token:
         request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request, timeout=60) as response:
-        data = response.read(MAX_DOWNLOAD_BYTES + 1)
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = response.read(MAX_DOWNLOAD_BYTES + 1)
+    except urllib.error.URLError:
+        raise TemplateValidationError("Het zip-bestand kon niet worden gedownload. Upload het opnieuw.")
     if len(data) > MAX_DOWNLOAD_BYTES:
         raise TemplateValidationError(f"Het bestand is groter dan {MAX_DOWNLOAD_BYTES // (1024 * 1024)} MB.")
     if not data:
@@ -101,8 +125,8 @@ def is_ignorable_zip_entry(entry: zipfile.ZipInfo) -> bool:
     return entry.is_dir() or entry.filename.startswith("__MACOSX/") or base_name in {".DS_Store", "Thumbs.db"}
 
 
-def validate_template_zip(data: bytes) -> list[str]:
-    """Check that the zip holds exactly the five Atlas export files. Returns their names."""
+def validate_template_zip(data: bytes, expected_prefixes: list[str]) -> list[str]:
+    """Check that the zip holds exactly one export file per expected prefix. Returns their names."""
     try:
         archive = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
@@ -113,7 +137,7 @@ def validate_template_zip(data: bytes) -> list[str]:
         if sum(entry.file_size for entry in entries) > MAX_UNCOMPRESSED_BYTES:
             raise TemplateValidationError("De inhoud van het zip-bestand is te groot.")
 
-        files_by_prefix = {prefix: [] for prefix in REQUIRED_EXPORT_PREFIXES}
+        files_by_prefix = {prefix: [] for prefix in expected_prefixes}
         unexpected_files = []
         for entry in entries:
             base_name = entry.filename.rsplit("/", 1)[-1]
@@ -133,7 +157,11 @@ def validate_template_zip(data: bytes) -> list[str]:
             problems.append("Meer dan één bestand voor: " + ", ".join(duplicates) + ".")
         if unexpected_files:
             listed = ", ".join(f"`{name}`" for name in sorted(unexpected_files)[:10])
-            problems.append("Onverwachte bestanden (alleen de vijf exportbestanden zijn toegestaan): " + listed + ".")
+            problems.append(
+                "Bestanden die niet zijn aangevinkt of geen exportbestand zijn: "
+                + listed
+                + ". Vink ze aan bij *Bestanden in de zip* of haal ze uit de zip."
+            )
         if problems:
             raise TemplateValidationError("\n".join(f"- {problem}" for problem in problems))
 
@@ -156,12 +184,16 @@ def unique_template_dir(slug: str) -> Path:
     return candidate
 
 
-def add_template_from_issue() -> Path:
-    fields = parse_issue_body(os.environ.get("ISSUE_BODY", ""))
+def validate_submission(fields: dict) -> tuple[str, bytes, list[str]]:
+    """Validate an issue submission. Returns the zip file name, its data and the export files it contains."""
     if not fields["name"]:
         raise TemplateValidationError("Het veld *Naam van de template* is leeg.")
     if not fields["description"]:
         raise TemplateValidationError("Het veld *Beschrijving* is leeg.")
+
+    expected_prefixes = parse_checked_export_prefixes(fields["included_files"])
+    if not expected_prefixes:
+        raise TemplateValidationError("Vink bij *Bestanden in de zip* aan welke exportbestanden in de zip zitten.")
 
     urls = set(ATTACHMENT_URL_PATTERN.findall(fields["attachment"]))
     if not urls:
@@ -174,7 +206,13 @@ def add_template_from_issue() -> Path:
     url = urls.pop()
     zip_file_name = zip_file_name_from_url(url)
     data = download_attachment(url, os.environ.get("GH_TOKEN"))
-    contents = validate_template_zip(data)
+    contents = validate_template_zip(data, expected_prefixes)
+    return zip_file_name, data, contents
+
+
+def add_template_from_issue() -> Path:
+    fields = parse_issue_body(os.environ.get("ISSUE_BODY", ""))
+    zip_file_name, data, contents = validate_submission(fields)
 
     target_dir = unique_template_dir(slugify(fields["name"]))
     target_dir.mkdir(parents=True)
@@ -230,9 +268,39 @@ def build_index() -> list[dict]:
     return templates
 
 
+def check_issue() -> bool:
+    """Validate a submission and write a Markdown comment for the submitter to CHECK_REPORT_FILE."""
+    fields = parse_issue_body(os.environ.get("ISSUE_BODY", ""))
+    try:
+        _, _, contents = validate_submission(fields)
+    except TemplateValidationError as error:
+        passed = False
+        report = (
+            "❌ **Automatische controle mislukt**\n\n"
+            f"{error}\n\n"
+            "Pas je inzending aan via **···** → **Edit** rechtsboven in je issue: upload een nieuwe zip "
+            "of pas de vinkjes aan. Na het opslaan wordt de controle automatisch opnieuw uitgevoerd."
+        )
+    else:
+        passed = True
+        listed = "\n".join(f"- `{name}`" for name in contents)
+        report = (
+            "✅ **Automatische controle geslaagd**\n\n"
+            f"De zip bevat:\n{listed}\n\n"
+            "Een beheerder bekijkt je inzending nog. Na goedkeuring verschijnt de template op de templatepagina."
+        )
+
+    print(report)
+    if report_file := os.environ.get("CHECK_REPORT_FILE"):
+        Path(report_file).write_text(f"{CHECK_COMMENT_MARKER}\n{report}\n", encoding="utf-8")
+    return passed
+
+
 def main() -> int:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
     try:
+        if command == "check-issue":
+            return 0 if check_issue() else 1
         if command == "from-issue":
             target_dir = add_template_from_issue()
             print(f"Template added in {target_dir.relative_to(ROOT_DIR)}")
