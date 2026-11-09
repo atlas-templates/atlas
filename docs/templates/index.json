@@ -15,6 +15,7 @@
         "sources_2026_11_09.json",
         "tables_2026_11_09.json"
       ],
+      "images": [],
       "path": "woz-waardes-opvragen/woz-waardes.zip",
       "size": 2293
     },
@@ -34,6 +35,7 @@
         "sources_2026_11_06.json",
         "tables_2026_11_06.json"
       ],
+      "images": [],
       "path": "energielabel-opvragen-eponline/energielabels.zip",
       "size": 2490
     }
