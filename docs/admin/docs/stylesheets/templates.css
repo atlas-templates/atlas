@@ -95,3 +95,23 @@
   border-left: 0.2rem solid #ff1744;
   padding-left: 0.6rem;
 }
+
+.md-typeset .tpl-card__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.md-typeset .tpl-card__image-link {
+  display: block;
+  max-width: 100%;
+}
+
+.md-typeset .tpl-card__image {
+  display: block;
+  max-width: 100%;
+  max-height: 20rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+}

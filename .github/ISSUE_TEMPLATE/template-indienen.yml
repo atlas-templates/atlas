@@ -28,7 +28,9 @@ body:
     id: beschrijving
     attributes:
       label: Beschrijving
-      description: Welke gekoppelde data bevat de template en wat moet een ander aanpassen voor de eigen omgeving?
+      description: |
+        Welke gekoppelde data bevat de template en wat moet een ander aanpassen voor de eigen omgeving?
+        Je kunt ook maximaal 5 schermafbeeldingen (PNG, JPG, GIF of WebP, max. 5 MB) in dit veld slepen.
     validations:
       required: true
   - type: input

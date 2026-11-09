@@ -16,6 +16,7 @@ import io
 import json
 import os
 import re
+import shutil
 import sys
 import unicodedata
 import urllib.error
@@ -32,6 +33,21 @@ METADATA_FILE_NAME = "template.json"
 MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # 50 MB, guards against zip bombs
 ATTACHMENT_URL_PATTERN = re.compile(r"https://github\.com/user-attachments/files/\d+/[^\s)\]\"'<>]+")
+
+# Images in the description are downloaded on approval and stored next to the zip, because
+# GitHub attachment URLs are not reliably viewable outside GitHub.
+MAX_IMAGES = 5
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+IMAGE_ASSET_URL_PATTERN = re.compile(r"https://github\.com/user-attachments/assets/[0-9a-fA-F-]+")
+HTML_IMAGE_TAG_PATTERN = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
+HTML_ATTRIBUTE_PATTERN = r"\b{name}\s*=\s*[\"']([^\"']*)[\"']"
+MARKDOWN_IMAGE_PATTERN = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<url>[^)\s]+)[^)]*\)")
+IMAGE_SIGNATURES = (
+    (b"\x89PNG\r\n\x1a\n", ".png"),
+    (b"\xff\xd8\xff", ".jpg"),
+    (b"GIF87a", ".gif"),
+    (b"GIF89a", ".gif"),
+)
 
 # Atlas components a template can contain. The submitter ticks which ones are in the zip;
 # the zip must then contain exactly one export file for each ticked component and nothing else.
@@ -103,20 +119,83 @@ def zip_file_name_from_url(url: str) -> str:
     return stem[:80] + ".zip"
 
 
-def download_attachment(url: str, token: str | None) -> bytes:
+class StripAuthorizationOnRedirect(urllib.request.HTTPRedirectHandler):
+    """GitHub redirects attachments to signed storage URLs that reject an extra Authorization header."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new_request = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_request is not None and urllib.parse.urlparse(newurl).hostname != urllib.parse.urlparse(
+            req.full_url
+        ).hostname:
+            new_request.remove_header("Authorization")
+        return new_request
+
+
+def download_url(url: str, token: str | None, max_bytes: int, what: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": "atlas-templates-action"})
     if token:
         request.add_header("Authorization", f"Bearer {token}")
+    opener = urllib.request.build_opener(StripAuthorizationOnRedirect)
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            data = response.read(MAX_DOWNLOAD_BYTES + 1)
+        with opener.open(request, timeout=60) as response:
+            data = response.read(max_bytes + 1)
     except urllib.error.URLError:
-        raise TemplateValidationError("Het zip-bestand kon niet worden gedownload. Upload het opnieuw.")
-    if len(data) > MAX_DOWNLOAD_BYTES:
-        raise TemplateValidationError(f"Het bestand is groter dan {MAX_DOWNLOAD_BYTES // (1024 * 1024)} MB.")
+        raise TemplateValidationError(f"{what} kon niet worden gedownload. Upload het opnieuw.")
+    if len(data) > max_bytes:
+        raise TemplateValidationError(f"{what} is groter dan {max_bytes // (1024 * 1024)} MB.")
     if not data:
-        raise TemplateValidationError("Het bestand is leeg.")
+        raise TemplateValidationError(f"{what} is leeg.")
     return data
+
+
+def download_attachment(url: str, token: str | None) -> bytes:
+    return download_url(url, token, MAX_DOWNLOAD_BYTES, "Het zip-bestand")
+
+
+def extract_description_images(description: str) -> tuple[str, list[dict]]:
+    """Remove image tags from the description. Returns the cleaned text and the GitHub images found."""
+    images = []
+
+    def collect(url: str, alt: str) -> None:
+        if IMAGE_ASSET_URL_PATTERN.fullmatch(url) and url not in (image["url"] for image in images):
+            images.append({"url": url, "alt": "" if alt.strip().lower() == "image" else alt.strip()})
+
+    def replace_html(match: re.Match) -> str:
+        tag = match.group(0)
+        src = re.search(HTML_ATTRIBUTE_PATTERN.format(name="src"), tag, re.IGNORECASE)
+        alt = re.search(HTML_ATTRIBUTE_PATTERN.format(name="alt"), tag, re.IGNORECASE)
+        if src:
+            collect(src.group(1), alt.group(1) if alt else "")
+        return ""
+
+    def replace_markdown(match: re.Match) -> str:
+        collect(match.group("url"), match.group("alt"))
+        return ""
+
+    text = HTML_IMAGE_TAG_PATTERN.sub(replace_html, description)
+    text = MARKDOWN_IMAGE_PATTERN.sub(replace_markdown, text)
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text, images
+
+
+def image_extension(data: bytes) -> str:
+    for signature, extension in IMAGE_SIGNATURES:
+        if data.startswith(signature):
+            return extension
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return ".webp"
+    raise TemplateValidationError("Een afbeelding in de beschrijving is geen PNG, JPG, GIF of WebP.")
+
+
+def download_images(images: list[dict], token: str | None) -> list[dict]:
+    if len(images) > MAX_IMAGES:
+        raise TemplateValidationError(f"De beschrijving bevat meer dan {MAX_IMAGES} afbeeldingen.")
+    downloaded = []
+    for number, image in enumerate(images, start=1):
+        data = download_url(image["url"], token, MAX_IMAGE_BYTES, f"Afbeelding {number} in de beschrijving")
+        downloaded.append({"file": f"afbeelding-{number}{image_extension(data)}", "alt": image["alt"], "data": data})
+    return downloaded
 
 
 def is_ignorable_zip_entry(entry: zipfile.ZipInfo) -> bool:
@@ -175,6 +254,19 @@ def validate_template_zip(data: bytes, expected_prefixes: list[str]) -> list[str
     return sorted(entry.filename.rsplit("/", 1)[-1] for entry in export_entries)
 
 
+def find_template_dir_for_issue(issue_number: int | None) -> Path | None:
+    """Return the folder of a template that was added earlier from the same issue, if any."""
+    if issue_number is None:
+        return None
+    for metadata_file in TEMPLATES_DIR.glob(f"*/{METADATA_FILE_NAME}"):
+        try:
+            if json.loads(metadata_file.read_text(encoding="utf-8")).get("issue") == issue_number:
+                return metadata_file.parent
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
 def unique_template_dir(slug: str) -> Path:
     candidate = TEMPLATES_DIR / slug
     counter = 2
@@ -184,8 +276,8 @@ def unique_template_dir(slug: str) -> Path:
     return candidate
 
 
-def validate_submission(fields: dict) -> tuple[str, bytes, list[str]]:
-    """Validate an issue submission. Returns the zip file name, its data and the export files it contains."""
+def validate_submission(fields: dict) -> dict:
+    """Validate an issue submission and download its zip and images."""
     if not fields["name"]:
         raise TemplateValidationError("Het veld *Naam van de template* is leeg.")
     if not fields["description"]:
@@ -203,30 +295,48 @@ def validate_submission(fields: dict) -> tuple[str, bytes, list[str]]:
     if len(urls) > 1:
         raise TemplateValidationError("Er staan meerdere bestanden in het veld *Zip-bestand*. Upload er precies één.")
 
+    token = os.environ.get("GH_TOKEN")
     url = urls.pop()
     zip_file_name = zip_file_name_from_url(url)
-    data = download_attachment(url, os.environ.get("GH_TOKEN"))
-    contents = validate_template_zip(data, expected_prefixes)
-    return zip_file_name, data, contents
+    zip_data = download_attachment(url, token)
+    contents = validate_template_zip(zip_data, expected_prefixes)
+    description, image_references = extract_description_images(fields["description"])
+    images = download_images(image_references, token)
+    return {
+        "zip_file_name": zip_file_name,
+        "zip_data": zip_data,
+        "contents": contents,
+        "description": description,
+        "images": images,
+    }
 
 
 def add_template_from_issue() -> Path:
     fields = parse_issue_body(os.environ.get("ISSUE_BODY", ""))
-    zip_file_name, data, contents = validate_submission(fields)
+    submission = validate_submission(fields)
+    issue_number = int(os.environ["ISSUE_NUMBER"]) if os.environ.get("ISSUE_NUMBER") else None
 
-    target_dir = unique_template_dir(slugify(fields["name"]))
+    # Approving the same issue again replaces the earlier version instead of adding a duplicate.
+    target_dir = find_template_dir_for_issue(issue_number)
+    if target_dir is not None:
+        shutil.rmtree(target_dir)
+    else:
+        target_dir = unique_template_dir(slugify(fields["name"]))
     target_dir.mkdir(parents=True)
-    (target_dir / zip_file_name).write_bytes(data)
+    (target_dir / submission["zip_file_name"]).write_bytes(submission["zip_data"])
+    for image in submission["images"]:
+        (target_dir / image["file"]).write_bytes(image["data"])
 
     metadata = {
         "name": fields["name"][:120],
-        "description": fields["description"][:2000],
+        "description": submission["description"][:2000],
         "atlas_version": fields["atlas_version"][:40],
         "author": os.environ.get("ISSUE_AUTHOR", ""),
-        "issue": int(os.environ["ISSUE_NUMBER"]) if os.environ.get("ISSUE_NUMBER") else None,
+        "issue": issue_number,
         "added": datetime.datetime.now(tz=datetime.UTC).date().isoformat(),
-        "file": zip_file_name,
-        "contents": contents,
+        "file": submission["zip_file_name"],
+        "contents": submission["contents"],
+        "images": [{"file": image["file"], "alt": image["alt"]} for image in submission["images"]],
     }
     (target_dir / METADATA_FILE_NAME).write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -257,6 +367,11 @@ def build_index() -> list[dict]:
             "added": metadata.get("added", ""),
             "file": metadata["file"],
             "contents": metadata.get("contents", []),
+            "images": [
+                {"path": f"{template_dir.name}/{image['file']}", "alt": image.get("alt", "")}
+                for image in metadata.get("images", [])
+                if (template_dir / image.get("file", "")).is_file()
+            ],
             "path": f"{template_dir.name}/{metadata['file']}",
             "size": file_path.stat().st_size,
         })
@@ -272,7 +387,7 @@ def check_issue() -> bool:
     """Validate a submission and write a Markdown comment for the submitter to CHECK_REPORT_FILE."""
     fields = parse_issue_body(os.environ.get("ISSUE_BODY", ""))
     try:
-        _, _, contents = validate_submission(fields)
+        submission = validate_submission(fields)
     except TemplateValidationError as error:
         passed = False
         report = (
@@ -283,10 +398,13 @@ def check_issue() -> bool:
         )
     else:
         passed = True
-        listed = "\n".join(f"- `{name}`" for name in contents)
+        listed = "\n".join(f"- `{name}`" for name in submission["contents"])
+        image_count = len(submission["images"])
+        images_line = f"Afbeeldingen in de beschrijving: {image_count}\n\n" if image_count else ""
         report = (
             "✅ **Automatische controle geslaagd**\n\n"
             f"De zip bevat:\n{listed}\n\n"
+            f"{images_line}"
             "Een beheerder bekijkt je inzending nog. Na goedkeuring verschijnt de template op de templatepagina."
         )
 

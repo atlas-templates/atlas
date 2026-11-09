@@ -21,7 +21,7 @@ de zip. Het resultaat verschijnt als reactie in het issue en als label: `control
 1. Controleer de inzending: open de zip en kijk of er geen geheimen, interne URL's of
    persoonsgegevens in staan.
 2. Zet het label `template-goedgekeurd` op het issue. Doe dit alleen bij `controle-geslaagd`.
-3. De workflow `Templates` controleert de zip nog een keer: precies de aangevinkte exportbestanden,
+3. De workflow `Templates` downloadt de afbeeldingen uit de beschrijving en controleert de zip nog een keer: precies de aangevinkte exportbestanden,
    niets anders, en allemaal geldige JSON. Daarna zet hij de zip in een eigen map, werkt `index.json` bij, reageert op het
    issue en sluit het. Klopt er iets niet, dan meldt de workflow de reden in het issue.
 
@@ -32,7 +32,8 @@ docs/templates/
 ├── index.json                 # wordt automatisch gegenereerd, niet met de hand aanpassen
 └── <naam-van-template>/
     ├── template.json          # naam, beschrijving, Atlas-versie, auteur, datum, bestandsnaam, inhoud
-    └── <bestand>.zip
+    ├── <bestand>.zip
+    └── afbeelding-1.png       # optioneel: afbeeldingen uit de beschrijving
 ```
 
 Een template aanpassen of verwijderen kan gewoon met een commit of pull request in deze map. Na de

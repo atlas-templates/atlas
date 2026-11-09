@@ -61,6 +61,39 @@
       });
   }
 
+  var URL_PATTERN = /https?:\/\/[^\s<>"']+/g;
+
+  // Builds the description from text nodes and links only, so submitted HTML is never interpreted.
+  function createDescription(description) {
+    var paragraph = createElement("p", "tpl-card__description");
+    var text = description.replace(/<img\b[^>]*>/gi, "").replace(/^\s+/, "");
+    var lastIndex = 0;
+    text.replace(URL_PATTERN, function (match, offset) {
+      var url = match.replace(/[.,;:!?)]+$/, "");
+      paragraph.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
+      paragraph.appendChild(createExternalLink(null, url, url));
+      lastIndex = offset + url.length;
+      return match;
+    });
+    paragraph.appendChild(document.createTextNode(text.slice(lastIndex)));
+    return paragraph;
+  }
+
+  function createImages(template, config) {
+    var gallery = createElement("div", "tpl-card__images");
+    template.images.forEach(function (image) {
+      var imageUrl = config.filesUrl + encodePath(image.path);
+      var link = createExternalLink("tpl-card__image-link", null, imageUrl);
+      var img = createElement("img", "tpl-card__image");
+      img.src = imageUrl;
+      img.alt = image.alt || template.name;
+      img.loading = "lazy";
+      link.appendChild(img);
+      gallery.appendChild(link);
+    });
+    return gallery;
+  }
+
   function createExternalLink(className, text, href) {
     var link = createElement("a", className, text);
     link.href = href;
@@ -74,7 +107,11 @@
     card.appendChild(createElement("h3", "tpl-card__title", template.name));
 
     if (template.description) {
-      card.appendChild(createElement("p", "tpl-card__description", template.description));
+      card.appendChild(createDescription(template.description));
+    }
+
+    if (Array.isArray(template.images) && template.images.length) {
+      card.appendChild(createImages(template, config));
     }
 
     var metaParts = [];
