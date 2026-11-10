@@ -1,6 +1,6 @@
 name: Template indienen
 description: Deel een template voor gekoppelde data met andere Atlas-beheerders. Na goedkeuring verschijnt hij op de templatepagina in de beheerdocumentatie.
-title: "[Template] "
+title: "[Template] Nieuwe inzending"
 labels: ["template-ingediend"]
 body:
   - type: markdown
@@ -9,6 +9,9 @@ body:
         Bedankt voor het delen! Een template is één zip-bestand met exportbestanden uit Atlas.
         Verzamel ze via de exportfunctie in het beheer, maak er één zip-bestand van en vink hieronder aan
         welke bestanden erin zitten.
+
+        Je hoeft de titel hierboven niet aan te passen: na het indienen wordt hij automatisch
+        vervangen door de naam van je template.
 
         Direct na het indienen controleert een automatische check je zip. Binnen een minuut zie je het
         resultaat als reactie in je issue. Daarna bekijkt een beheerder je inzending. Na goedkeuring
@@ -53,13 +56,14 @@ body:
         - label: "`tables_datum.json`"
         - label: "`sources_datum.json`"
         - label: "`categories_datum.json`"
-  - type: textarea
+  - type: upload
     id: zip
     attributes:
       label: Zip-bestand
-      description: Sleep precies één .zip-bestand met de aangevinkte exportbestanden in dit veld.
+      description: Upload precies één .zip-bestand met de aangevinkte exportbestanden.
     validations:
       required: true
+      accept: ".zip"
   - type: checkboxes
     id: akkoord
     attributes:

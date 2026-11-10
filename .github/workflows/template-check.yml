@@ -3,6 +3,7 @@ name: Template check
 # Validates a template submission as soon as the issue is opened or edited, so the submitter
 # gets feedback right away instead of after review. The result is posted as a single comment
 # (updated on every run) and reflected in the labels `controle-geslaagd` / `controle-mislukt`.
+# The issue title is replaced by the template name, so submitters can leave the prefilled title.
 # Nothing is written to the repository here; that only happens after approval (templates.yml).
 
 on:
@@ -35,7 +36,21 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHECK_REPORT_FILE: ${{ runner.temp }}/check-report.md
+          ISSUE_TITLE_FILE: ${{ runner.temp }}/issue-title.txt
         run: python3 .github/scripts/templates.py check-issue
+
+      - name: Set issue title to template name
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          CURRENT_TITLE: ${{ github.event.issue.title }}
+          TITLE_FILE: ${{ runner.temp }}/issue-title.txt
+        run: |
+          if [ ! -s "$TITLE_FILE" ]; then exit 0; fi
+          new_title="$(cat "$TITLE_FILE")"
+          if [ "$new_title" != "$CURRENT_TITLE" ]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --title "$new_title"
+          fi
 
       - name: Post or update check comment
         env:

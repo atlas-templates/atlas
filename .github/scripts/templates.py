@@ -290,7 +290,7 @@ def validate_submission(fields: dict) -> dict:
     urls = set(ATTACHMENT_URL_PATTERN.findall(fields["attachment"]))
     if not urls:
         raise TemplateValidationError(
-            "Er is geen zip-bestand gevonden in het veld *Zip-bestand*. Sleep het bestand in dat veld."
+            "Er is geen zip-bestand gevonden in het veld *Zip-bestand*. Upload het bestand in dat veld."
         )
     if len(urls) > 1:
         raise TemplateValidationError("Er staan meerdere bestanden in het veld *Zip-bestand*. Upload er precies één.")
@@ -383,9 +383,19 @@ def build_index() -> list[dict]:
     return templates
 
 
+def issue_title_for(name: str) -> str:
+    """Issue title derived from the template name, so submitters do not have to fill in a title."""
+    return "[Template] " + " ".join(name.split())[:120]
+
+
 def check_issue() -> bool:
-    """Validate a submission and write a Markdown comment for the submitter to CHECK_REPORT_FILE."""
+    """Validate a submission and write a Markdown comment for the submitter to CHECK_REPORT_FILE.
+
+    Also writes the issue title derived from the template name to ISSUE_TITLE_FILE, if set.
+    """
     fields = parse_issue_body(os.environ.get("ISSUE_BODY", ""))
+    if fields["name"] and (title_file := os.environ.get("ISSUE_TITLE_FILE")):
+        Path(title_file).write_text(issue_title_for(fields["name"]), encoding="utf-8")
     try:
         submission = validate_submission(fields)
     except TemplateValidationError as error:
