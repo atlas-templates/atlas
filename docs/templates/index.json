@@ -1,6 +1,26 @@
 {
   "templates": [
     {
+      "id": "nog-een-korte-duidelijke-naam-zoals-test2",
+      "name": "Nog een korte duidelijke naam zoals: Test2",
+      "description": "Hier staat wat je er allemaal mee kan en hoe te installeren",
+      "atlas_version": "3.61.0",
+      "author": "mvlijmen1",
+      "issue": 8,
+      "added": "2026-11-10",
+      "file": "energielabels1.zip",
+      "contents": [
+        "authorizations_2026_11_06.json",
+        "categories_2026_11_06.json",
+        "layers_2026_11_06.json",
+        "sources_2026_11_06.json",
+        "tables_2026_11_06.json"
+      ],
+      "images": [],
+      "path": "nog-een-korte-duidelijke-naam-zoals-test2/energielabels1.zip",
+      "size": 2490
+    },
+    {
       "id": "dit-is-de-naam-van-de-template",
       "name": "Dit is de naam van de template",
       "description": "Beschrijving",
