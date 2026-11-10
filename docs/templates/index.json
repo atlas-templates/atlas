@@ -1,6 +1,26 @@
 {
   "templates": [
     {
+      "id": "dit-is-de-naam-van-de-template",
+      "name": "Dit is de naam van de template",
+      "description": "Beschrijving",
+      "atlas_version": "3.61.0",
+      "author": "mvlijmen1",
+      "issue": 6,
+      "added": "2026-11-10",
+      "file": "energielabels1.zip",
+      "contents": [
+        "authorizations_2026_11_06.json",
+        "categories_2026_11_06.json",
+        "layers_2026_11_06.json",
+        "sources_2026_11_06.json",
+        "tables_2026_11_06.json"
+      ],
+      "images": [],
+      "path": "dit-is-de-naam-van-de-template/energielabels1.zip",
+      "size": 2490
+    },
+    {
       "id": "woz-waardes-opvragen",
       "name": "woz-waardes-opvragen",
       "description": "Het WOZ-waardeloket toont alleen waardegegevens van woningen. Voor bedrijfspanden krijg je dus geen waardes te zien.\nLet op: Dit zijn de gegevens van wozwaardeloket.nl. Wozwaardeloket.nl geeft geen garantie over de werking van de site. URL's en verwijzingen kunnen zonder aankondiging veranderen.",
